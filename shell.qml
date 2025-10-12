@@ -3,6 +3,6 @@ import "modules"
 
 ShellRoot {
 	OverlayLayer {}
-	TopLayer {}
+	//TopLayer {}
 	TopStatusBar {}
 }
