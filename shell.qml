@@ -2,7 +2,8 @@ import Quickshell
 import "modules"
 
 ShellRoot {
+	ReloadPopup {}
 	OverlayLayer {}
-	//TopLayer {}
-	TopStatusBar {}
+	BottomLayer {}
+	BottomStatusBar {}
 }
