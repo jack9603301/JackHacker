@@ -6,13 +6,10 @@ import QtQuick.Controls
 import Quickshell
 import "modules"
 
-ApplicationWindow {
-	id: root
-	ShellRoot {
-		id: shell
-		ReloadPopup {}
-		OverlayLayer {}
-		BottomLayer {}
-		BottomStatusBar {}
-	}
+ShellRoot {
+	id: shell
+	ReloadPopup {}
+	OverlayLayer {}
+	BottomLayer {}
+	BottomStatusBar {}
 }

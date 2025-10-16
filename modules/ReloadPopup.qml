@@ -38,8 +38,8 @@ Scope {
 			left: 25
 		}
 
-		width: rect.width
-		height: rect.height
+		implicitWidth: rect.implicitWidth
+		implicitHeight: rect.implicitHeight
 
 		color: "transparent"
 
@@ -83,13 +83,13 @@ Scope {
 				color: "#20ffffff"
 				anchors.bottom: parent.bottom
 				anchors.left: parent.left
-				height: 20
+				implicitHeight: 20
 
 				PropertyAnimation {
 					id: anim
 					target: bar
-					property: "width"
-					from: rect.width
+					property: "implicitWidth"
+					from: rect.implicitWidth
 					to: 0
 					duration: failed ? 10000 : 800
 					onFinished: popupLoader.visible = false

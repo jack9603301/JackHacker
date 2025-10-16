@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
@@ -34,20 +35,21 @@ Scope {
 				right: true
 			}
 			WlrLayershell.exclusiveZone: barHeight
-			height: barHeight
+			implicitHeight: barHeight
 			color: "transparent"
 			Rectangle {
 				id: currentWorkspaceContext
 				readonly property HyprlandMonitor monitor: Hyprland.monitorFor(statusBar.screen)
 				readonly property HyprlandWorkspace workspace: monitor.activeWorkspace
 				readonly property int horizontalPadding: 10
+				readonly property string currentWorkspace: currentWorkspaceContext.workspace == null ? "[null]" : currentWorkspaceContext.workspace.name
 				anchors {
 					top: parent.top
 					left: parent.left
 				}
 
-				width: workspaceText.width + (horizontalPadding * 2)
-				height: statusBar.barWidth
+				implicitWidth: workspaceText.implicitWidth + (horizontalPadding * 2)
+				implicitHeight: statusBar.barWidth
 
 				border {
 					width: statusBar.lineWidth
@@ -58,7 +60,7 @@ Scope {
 
 				Text {
 					id: workspaceText
-					text: "当前工作区 => " + currentWorkspaceContext.workspace.name
+					text: "当前工作区 => " + currentWorkspaceContext.currentWorkspace
 					color: "white"
 					font.pointSize: fontSize
 					anchors.centerIn: parent
@@ -107,8 +109,8 @@ Scope {
 				readonly property color normalColor: Qt.rgba(14/255.0, 49/255.0, 90/255.0, 0.8)
 
 
-				width: 10 * statusBar.barWidth
-				height: workspacesPopupContext.height
+				implicitWidth: 10 * statusBar.barWidth
+				implicitHeight: workspacesPopupContext.implicitHeight
 				color: "transparent"
 
 				Timer {
@@ -119,14 +121,6 @@ Scope {
                         			if (workspacesPopup.visible) {
                             				workspacesPopup.visible = false;
                         			}
-					}
-				}
-
-				onVisibleChanged: {
-					if (visible) {
-						//autoCloseTimer.start();
-					} else {
-						//autoCloseTimer.stop();
 					}
 				}
 
@@ -147,8 +141,8 @@ Scope {
 					id: workspacesPopupContext
 					readonly property int horizontalPadding: 10
 					property int totalWorkspaceCount: Hyprland.workspaces.values.length
-					height: workspacesPopupTitle.height + inputWorkspaceSelect.height + unamePopupTitle.height + unamedContextMenu.height + workspacesPopupNamedTitle.height + namedWorkspaceContext.height + workspacesPopupSpecialTitle.height + specialorkspaceContext.height + 5
-					width: workspacesPopup.width
+					implicitHeight: workspacesPopupTitle.implicitHeight + inputWorkspaceSelect.implicitHeight + unamePopupTitle.implicitHeight + unamedContextMenu.implicitHeight + workspacesPopupNamedTitle.implicitHeight + namedWorkspaceContext.implicitHeight + workspacesPopupSpecialTitle.implicitHeight + specialorkspaceContext.implicitHeight + 5
+					implicitWidth: workspacesPopup.implicitWidth
 					color: workspacesPopup.normalColor
 
 					border {
@@ -179,8 +173,8 @@ Scope {
 
 					Rectangle {
                                                 id: workspacesPopupTitle
-                                                height: statusBar.barHeight
-                                                width: workspacesPopup.width
+                                                implicitHeight: statusBar.barHeight
+                                                implicitWidth: workspacesPopup.implicitWidth
                                                 radius: statusBar.barGlobalRadius
                                                 color: workspacesPopup.normalColor
 
@@ -190,7 +184,7 @@ Scope {
                                                 }
                                                 Text {
                                                         text: "工作区切换"
-                                                        width: workspacesPopupContext.width
+                                                        width: workspacesPopupContext.implicitWidth
                                                         height: statusBar.barHeight
                                                         color: statusBar.textColor
                                                         horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
@@ -202,8 +196,8 @@ Scope {
 
 					Rectangle {
 						id: inputWorkspaceSelect
-						height: statusBar.barHeight
-						width: workspacesPopup.width
+						implicitHeight: statusBar.barHeight
+						implicitWidth: workspacesPopup.implicitWidth
 						anchors.top: workspacesPopupTitle.bottom
 
 						radius: statusBar.barGlobalRadius
@@ -255,8 +249,8 @@ Scope {
 
 					Rectangle {
                                                 id: unamePopupTitle
-                                                height: statusBar.barHeight
-                                                width: workspacesPopup.width
+                                                implicitHeight: statusBar.barHeight
+                                                implicitWidth: workspacesPopup.implicitWidth
 						radius: statusBar.barGlobalRadius
 						anchors.top: inputWorkspaceSelect.bottom
                                                 color: Qt.rgba(83/255.0, 134/255.0, 103/255.0, 0.8)
@@ -266,7 +260,7 @@ Scope {
                                                 }
                                                 Text {
                                                         text: "无名工作区"
-                                                        width: workspacesPopupContext.width
+                                                        width: workspacesPopupContext.implicitWidth
                                                         height: statusBar.barHeight
                                                         color: statusBar.textColor
                                                         horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
@@ -286,20 +280,20 @@ Scope {
                                                 readonly property int itemsInLastRow: itemCount % workspacesPopup.itemsPerRow
                                                 readonly property int emptySlots: itemsInLastRow === 0 ? 0 : workspacesPopup.itemsPerRow - itemsInLastRow
 						readonly property int totalRows: Math.ceil(unamedContextMenu.itemCount * 1.0 / unamedContextMenu.itemsPerLine * 1.0)
-						height: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
-						width: workspacesPopup.width
+						implicitHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
+						implicitWidth: workspacesPopup.implicitWidth
 						Flow {
 							id: workspacesGrid
 							spacing: workspacesPopup.gridSpacing
 							Layout.fillWidth: true
 							Layout.preferredHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
-							Layout.preferredWidth: workspacesPopup.width
+							Layout.preferredWidth: workspacesPopup.implicitWidth
 								
 							Repeater {
 								model: workspacesPopupContext.unamedWorkspaces
 								Rectangle {
-                                    					width: workspacesPopup.itemSize
-                                    					height: workspacesPopup.itemSize
+                                    					implicitWidth: workspacesPopup.itemSize
+                                    					implicitHeight: workspacesPopup.itemSize
                                     					radius: statusBar.barGlobalRadius
                                     					color: modelData.active ? "#8FBCBB" : workspacesPopup.normalColor
                                     					border.width: statusBar.lineWidth
@@ -326,8 +320,8 @@ Scope {
 								model: workspacesGrid.emptySlots
 
 								Rectangle {
-                                    					width: workspacesPopup.itemSize
-                                    					height: workspacesPopup.itemSize
+                                    					implicitWidth: workspacesPopup.itemSize
+                                    					implicitHeight: workspacesPopup.itemSize
                                     					color: "transparent"
                                     					border.width: 0
                                 				}
@@ -338,8 +332,8 @@ Scope {
 					Rectangle {
 						anchors.top: unamedContextMenu.bottom
                                                 id: workspacesPopupNamedTitle
-                                                height: statusBar.barHeight
-                                                width: workspacesPopup.width
+                                                implicitHeight: statusBar.barHeight
+                                                implicitWidth: workspacesPopup.implicitWidth
 						radius: statusBar.barGlobalRadius
 						visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
                                                 color: Qt.rgba(83/255.0, 134/255.0, 103/255.0, 0.8)
@@ -349,7 +343,7 @@ Scope {
                                                 }
                                                 Text {
                                                         text: "命名工作区"
-                                                        width: workspacesPopupContext.width
+                                                        width: workspacesPopupContext.implicitWidth
                                                         height: statusBar.barHeight
                                                         color: statusBar.textColor
                                                         horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
@@ -360,8 +354,8 @@ Scope {
 					}
 					ColumnLayout {
 						id: namedWorkspaceContext
-						width: workspacesPopup.width
-						height: workspacesPopupContext.namedWorkspaces.length * statusBar.barHeight
+						width: workspacesPopup.implicitWidth
+						implicitHeight: workspacesPopupContext.namedWorkspaces.length * statusBar.barHeight
 						spacing: workspacesPopup.gridSpacing
 						anchors.top: workspacesPopupNamedTitle.bottom
 						visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
@@ -370,8 +364,8 @@ Scope {
 						Repeater {
 							model: workspacesPopupContext.namedWorkspaces
 							Rectangle {
-								width: namedWorkspaceContext.width
-								height: workspacesPopup.itemSize
+								implicitWidth: namedWorkspaceContext.width
+								implicitHeight: workspacesPopup.itemSize
 								radius: statusBar.barGlobalRadius
 								border.width: modelData.active ? statusBar.lineWidth : 0
 								border.color: modelData.active ? statusBar.borderColor : 0
@@ -397,8 +391,8 @@ Scope {
 					Rectangle {
                                                 anchors.top: namedWorkspaceContext.bottom
                                                 id: workspacesPopupSpecialTitle
-                                                height: statusBar.barHeight
-                                                width: workspacesPopup.width
+                                                implicitHeight: statusBar.barHeight
+                                                implicitWidth: workspacesPopup.implicitWidth
 						radius: statusBar.barGlobalRadius
 						visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
                                                 color: Qt.rgba(83/255.0, 134/255.0, 103/255.0, 0.8)
@@ -408,7 +402,7 @@ Scope {
                                                 }
                                                 Text {
                                                         text: "特殊工作区"
-                                                        width: workspacesPopupContext.width
+                                                        width: workspacesPopupContext.implicitWidth
                                                         height: statusBar.barHeight
                                                         color: statusBar.textColor
                                                         horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
@@ -419,8 +413,8 @@ Scope {
                                         }
                                         ColumnLayout {
                                                 id: specialorkspaceContext
-                                                width: workspacesPopup.width
-                                                height: workspacesPopupContext.specialWorkspaces.length * statusBar.barHeight
+                                                implicitWidth: workspacesPopup.implicitWidth
+                                                implicitHeight: workspacesPopupContext.specialWorkspaces.length * statusBar.barHeight
                                                 spacing: workspacesPopup.gridSpacing
 						anchors.top: workspacesPopupSpecialTitle.bottom
 						visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
@@ -428,8 +422,8 @@ Scope {
                                                 Repeater {
                                                         model: workspacesPopupContext.specialWorkspaces
 							Rectangle {
-                                                                width: namedWorkspaceContext.width
-                                                                height: workspacesPopup.itemSize
+                                                                implicitWidth: namedWorkspaceContext.implicitWidth
+                                                                implicitHeight: workspacesPopup.itemSize
 								radius: statusBar.barGlobalRadius
 								color: workspacesPopup.normalColor
 
@@ -462,9 +456,9 @@ Scope {
 
 			Rectangle {
                                 id: trayContext
-                                height: parent.height
-				width: trayIconsFlow.width < statusBar.iconSize ? 30 : trayIconsFlow.width + 10
-				//visible: trayIconsFlow.width < statusBar.iconSize ? false : true
+                                implicitHeight: parent.implicitHeight
+				implicitWidth: trayIconsFlow.implicitWidth < statusBar.iconSize ? 30 : trayIconsFlow.implicitWidth + 10
+				//visible: trayIconsFlow.implicitWidth < statusBar.iconSize ? false : true
 
 				anchors.right: parent.right
 				anchors.verticalCenter: parent.verticalCenter
@@ -490,8 +484,8 @@ Scope {
 							id: trayItemRect
 							required property SystemTrayItem modelData
 
-							width: statusBar.iconSize
-							height: statusBar.iconSize
+							implicitWidth: statusBar.iconSize
+							implicitHeight: statusBar.iconSize
 
 							color: "transparent"
 
@@ -540,8 +534,8 @@ Scope {
 									}
 
 									onPositionChanged: {
-										var centerXLocal = trayItemRect.width / 2
-										var centerYLocal = trayItemRect.height / 2
+										var centerXLocal = trayItemRect.implicitWidth / 2
+										var centerYLocal = trayItemRect.implicitHeight / 2
 										var centerGlobalPoint = trayMouseArea.mapToItem(null, centerXLocal, centerYLocal);
 										toolTip.x = centerGlobalPoint.x
                                                                                	toolTip.y = centerGlobalPoint.y + 20
@@ -575,10 +569,6 @@ Scope {
 										id: menu
 										anchor.window: statusBar
 										menu: modelData.menu
-										Component.onCompleted: {
-											menu.window.color = "red"
-											console.log("done");
-										}
 									}
 								}
 
