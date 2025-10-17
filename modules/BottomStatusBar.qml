@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
@@ -68,19 +67,14 @@ Scope {
 
 				MouseArea {
 					anchors.fill: parent
-					//cursorShape: Qt.PointingHandCursor
-					hoverEnabled: true
-					onEntered: {
-                                                autoCloseTimer.stop();
-                                        }
-
-                                        onExited: {
-                                                autoCloseTimer.start();
-                                        }
 
 					acceptedButtons: Qt.RightButton
 					onClicked: {
-						workspacesPopup.visible = !workspacesPopup.visible;
+						if(workspacesPopup.is_open()) {
+							workspacesPopup.close()
+						} else {
+							workspacesPopup.open()
+						}
 					}
 					onWheel: function(wheel) {
 						if (wheel.angleDelta.y > 0) {
@@ -113,27 +107,26 @@ Scope {
 				implicitHeight: workspacesPopupContext.implicitHeight
 				color: "transparent"
 
-				Timer {
-					id: autoCloseTimer
-					interval: 10000
-					repeat: false
-					onTriggered: {
-                        			if (workspacesPopup.visible) {
-                            				workspacesPopup.visible = false;
-                        			}
-					}
+				function open() {
+					visible = true;
+					focusGrab.active = true;
 				}
 
-				MouseArea {
-					anchors.fill: parent
-					hoverEnabled: true
+				function close() {
+					visible = false;
+					focusGrab.active = false;
+				}
 
-					onEntered: {
-						autoCloseTimer.stop();
-					}
+				function is_open() {
+					return visible;
+				}
 
-					onExited: {
-						autoCloseTimer.start();
+				HyprlandFocusGrab {
+					id: focusGrab
+					active: false
+					windows: [workspacesPopup]
+					onCleared: {
+						workspacesPopup.visible = false;
 					}
 				}
 
@@ -310,7 +303,9 @@ Scope {
                                         					anchors.fill: parent
                                         					cursorShape: Qt.PointingHandCursor
 										onClicked: {
-											Hyprland.dispatch("workspace " + modelData.name)
+											if (!modelData.active) {
+												Hyprland.dispatch("workspace " + modelData.name)
+											}
 										}
 									}
 			    					}
@@ -380,8 +375,10 @@ Scope {
 								MouseArea {
                                                                         anchors.fill: parent
                                                                        	cursorShape: Qt.PointingHandCursor
-                                                                       	onClicked: {
-                                                                        	Hyprland.dispatch("workspace " + modelData.name)
+									onClicked: {
+										if (!modelData.active) {
+                                                                        		Hyprland.dispatch("workspace " + modelData.name)
+										}
 									}
                                                                 }
 							}
@@ -455,10 +452,10 @@ Scope {
 			}
 
 			Rectangle {
-                                id: trayContext
-                                implicitHeight: parent.implicitHeight
+				id: trayContext
+                                implicitHeight: statusBar.implicitHeight
 				implicitWidth: trayIconsFlow.implicitWidth < statusBar.iconSize ? 30 : trayIconsFlow.implicitWidth + 10
-				//visible: trayIconsFlow.implicitWidth < statusBar.iconSize ? false : true
+				visible: trayIconsFlow.implicitWidth < statusBar.iconSize ? false : true
 
 				anchors.right: parent.right
 				anchors.verticalCenter: parent.verticalCenter
@@ -475,7 +472,7 @@ Scope {
                                         anchors.verticalCenter: parent.verticalCenter
                                         anchors.right: parent.right
                                         anchors.rightMargin: 5
-                                        spacing: 5
+					spacing: 5
 
                                         Repeater {
                                                 model: SystemTray.items
@@ -565,9 +562,11 @@ Scope {
 										item.close()
 									}
 
-									sourceComponent: QsMenuAnchor {
+									sourceComponent: SystemTrayMenu {
 										id: menu
-										anchor.window: statusBar
+										x: 100
+										y: 100
+										window: statusBar
 										menu: modelData.menu
 									}
 								}
@@ -584,7 +583,7 @@ Scope {
                                                 }
                                         }
                                 }
-                        }
+			}
 		}
 	}
 }
