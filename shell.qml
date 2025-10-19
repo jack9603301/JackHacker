@@ -6,9 +6,9 @@ import Quickshell
 import "modules"
 
 ShellRoot {
-	id: shell
-	ReloadPopup {}
-	OverlayLayer {}
-	BottomLayer {}
-	BottomStatusBar {}
+    id: shell
+    ReloadPopup {}
+    OverlayLayer {}
+    //BottomLayer {}
+    BottomStatusBar {}
 }
