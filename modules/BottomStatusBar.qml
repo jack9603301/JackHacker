@@ -34,8 +34,8 @@ Scope {
                 left: true
                 right: true
             }
-            WlrLayershell.exclusiveZone: barHeight
-            implicitHeight: barHeight
+            WlrLayershell.exclusiveZone: barHeight + 10
+            implicitHeight: barHeight + 20
             color: "transparent"
             Rectangle {
                 id: currentWorkspaceContext
@@ -46,6 +46,8 @@ Scope {
                 anchors {
                     top: parent.top
                     left: parent.left
+                    leftMargin: 20
+                    topMargin: 10
                 }
 
                 implicitWidth: workspaceText.implicitWidth + (horizontalPadding * 2)
@@ -70,10 +72,13 @@ Scope {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton
                     onClicked: (mouse) => {
-                        if (workspacesPopup.is_open()) {
-                            workspacesPopup.close();
+                        if (workspacesPopupLoader.is_open()) {
+                            workspacesPopupLoader.close();
                         } else {
-                            workspacesPopup.open();
+                            var centerXLocal = currentWorkspaceContext.implicitWidth / 2;
+                            var centerYLocal = currentWorkspaceContext.implicitHeight / 2;
+                            var centerGlobalPoint = mapToItem(null, centerXLocal, centerYLocal);
+                            workspacesPopupLoader.open(centerGlobalPoint.x, centerGlobalPoint.y + 25);
                         }
                         mouse.accepted = true;
                     }
@@ -87,224 +92,325 @@ Scope {
                     }
                 }
             }
-
-            PopupWindow {
-                id: workspacesPopup
-                visible: false
-                anchor.window: statusBar
-                anchor.rect.x: 20
-                anchor.rect.y: 40
-
-                readonly property int singleUnnamedWorkspacesGroup: 5
-                readonly property int gridSpacing: 5
-                readonly property int itemSize: statusBar.barHeight
-                readonly property int itemsPerRow: 10
-                readonly property color normalColor: Qt.rgba(14 / 255.0, 49 / 255.0, 90 / 255.0, 0.8)
-                readonly property int gap: 10
-                readonly property int contextWidth: 10 * statusBar.barWidth
-                readonly property color selectColor: Qt.rgba(5/255, 219/255, 102/255, 0.6)
-
-                implicitWidth: workspacesPopupContext.implicitWidth
-                implicitHeight: workspacesPopupContext.implicitHeight
-                color: "transparent"
-
-                function open() {
-                    visible = true;
-                    focusGrab.active = true;
+            Loader {
+                id: workspacesPopupLoader
+                active: false
+                function open(x, y) {
+                    active = true
+                    item.anchor.rect.x = x;
+                    item.anchor.rect.y = y;
+                    item.open();
                 }
-
                 function close() {
-                    visible = false;
-                    focusGrab.active = false;
+                    item.close();
+                    active = false;
                 }
-
                 function is_open() {
-                    return visible;
+                    return active && item.is_open();
                 }
+                sourceComponent: PopupWindow {
+                    id: workspacesPopup
+                    visible: false
+                    anchor.window: statusBar
 
-                HyprlandFocusGrab {
-                    id: focusGrab
-                    active: false
-                    windows: [workspacesPopup]
-                    onCleared: {
-                        workspacesPopup.visible = false;
+                    readonly property int singleUnnamedWorkspacesGroup: 5
+                    readonly property int gridSpacing: 5
+                    readonly property int itemSize: statusBar.barHeight
+                    readonly property int itemsPerRow: 10
+                    readonly property color normalColor: Qt.rgba(14 / 255.0, 49 / 255.0, 90 / 255.0, 0.8)
+                    readonly property int gap: 10
+                    readonly property int contextWidth: 10 * statusBar.barWidth
+                    readonly property color selectColor: Qt.rgba(5/255, 219/255, 102/255, 0.6)
+
+                    implicitWidth: workspacesPopupContext.implicitWidth
+                    implicitHeight: workspacesPopupContext.implicitHeight
+                    color: "transparent"
+
+                    function open() {
+                        visible = true;
+                        focusGrab.active = true;
                     }
-                }
 
-                Rectangle {
-                    id: workspacesPopupContext
-                    readonly property int horizontalPadding: 10
-                    property int totalWorkspaceCount: Hyprland.workspaces.values.length
-                    implicitHeight: workspacesPopupTitle.implicitHeight + inputWorkspaceSelect.implicitHeight + unamePopupTitle.implicitHeight + unamedContextMenu.implicitHeight + workspacesPopupNamedTitle.implicitHeight + namedWorkspaceContext.implicitHeight + workspacesPopupSpecialTitle.implicitHeight + specialorkspaceContext.implicitHeight + workspacesPopup.gap * 8
-                    implicitWidth: workspacesPopup.contextWidth + workspacesPopup.gap * 2
-                    color: workspacesPopup.normalColor
-
-                    border {
-                        width: statusBar.lineWidth
-                        color: statusBar.borderColor
+                    function close() {
+                        visible = false;
+                        focusGrab.active = false;
                     }
-                    radius: statusBar.barGlobalRadius
 
-                    readonly property var unamedWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
-                        return ws.id > 0;
-                    }).sort(function (a, b) {
-                        return a.id - b.id;
-                    })
-                    readonly property var namedWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
-                        var isNamedId = ws.id < 0;
-                        var isNotSpecial = !ws.name.startsWith("special:");
-                        return isNamedId && isNotSpecial;
-                    }).sort(function (a, b) {
-                        return a.name.localeCompare(b.name);
-                    })
-                    readonly property var specialWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
-                        var isNamedId = ws.id < 0;
-                        var isNotSpecial = !ws.name.startsWith("special:");
-                        return isNamedId && !isNotSpecial;
-                    }).sort(function (a, b) {
-                        return a.id - b.id;
-                    })
+                    function is_open() {
+                        return visible;
+                    }
+
+                    HyprlandFocusGrab {
+                        id: focusGrab
+                        active: false
+                        windows: [workspacesPopup]
+                        onCleared: {
+                            workspacesPopup.visible = false;
+                        }
+                    }
 
                     Rectangle {
-                        id: workspacesPopupTitle
-                        implicitHeight: statusBar.barHeight
-                        implicitWidth: workspacesPopupContext.implicitWidth - workspacesPopup.gap * 2
-                        radius: statusBar.barGlobalRadius
+                        id: workspacesPopupContext
+                        readonly property int horizontalPadding: 10
+                        property int totalWorkspaceCount: Hyprland.workspaces.values.length
+                        implicitHeight: workspacesPopupTitle.implicitHeight + inputWorkspaceSelect.implicitHeight + unamePopupTitle.implicitHeight + unamedContextMenu.implicitHeight + workspacesPopupNamedTitle.implicitHeight + namedWorkspaceContext.implicitHeight + workspacesPopupSpecialTitle.implicitHeight + specialorkspaceContext.implicitHeight + workspacesPopup.gap * 9
+                        implicitWidth: workspacesPopup.contextWidth + workspacesPopup.gap * 2
                         color: workspacesPopup.normalColor
-                        anchors.top: parent.top
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
 
                         border {
                             width: statusBar.lineWidth
                             color: statusBar.borderColor
                         }
-                        Text {
-                            text: "工作区切换"
-                            width:  workspacesPopup.contextWidth
-                            height: statusBar.barHeight
-                            color: statusBar.textColor
-                            horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
-                            font.pointSize: statusBar.fontSize
-                            anchors.top: parent.top
-                            anchors.topMargin: 5
-                        }
-                    }
-
-                    Rectangle {
-                        id: inputWorkspaceSelect
-                        implicitHeight: statusBar.barHeight
-                        implicitWidth:  workspacesPopup.contextWidth
-                        anchors.top: workspacesPopupTitle.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-
                         radius: statusBar.barGlobalRadius
-                        color: Qt.rgba(0, 0, 0, 0.4)
 
-                        border {
-                            width: statusBar.lineWidth
-                            color: statusBar.borderColor
+                        readonly property var unamedWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
+                            return ws.id > 0;
+                        }).sort(function (a, b) {
+                            return a.id - b.id;
+                        })
+                        readonly property var namedWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
+                            var isNamedId = ws.id < 0;
+                            var isNotSpecial = !ws.name.startsWith("special:");
+                            return isNamedId && isNotSpecial;
+                        }).sort(function (a, b) {
+                            return a.name.localeCompare(b.name);
+                        })
+                        readonly property var specialWorkspaces: Hyprland.workspaces.values.filter(function (ws) {
+                            var isNamedId = ws.id < 0;
+                            var isNotSpecial = !ws.name.startsWith("special:");
+                            return isNamedId && !isNotSpecial;
+                        }).sort(function (a, b) {
+                            return a.id - b.id;
+                        })
+
+                        Rectangle {
+                            id: workspacesPopupTitle
+                            implicitHeight: statusBar.barHeight
+                            implicitWidth: workspacesPopupContext.implicitWidth - workspacesPopup.gap * 2
+                            radius: statusBar.barGlobalRadius
+                            color: workspacesPopup.normalColor
+                            anchors.top: parent.top
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+
+                            border {
+                                width: statusBar.lineWidth
+                                color: statusBar.borderColor
+                            }
+                            Text {
+                                text: "工作区切换"
+                                width:  workspacesPopup.contextWidth
+                                height: statusBar.barHeight
+                                color: statusBar.textColor
+                                horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
+                                font.pointSize: statusBar.fontSize
+                                anchors.top: parent.top
+                                anchors.topMargin: 5
+                            }
                         }
 
-                        TextField {
-                            id: workspaceInput
-                            anchors.fill: parent
-                            placeholderText: "输入工作区名字..."
-                            placeholderTextColor: statusBar.textColor
-                            color: statusBar.textColor
-                            font.pointSize: statusBar.fontSize
-                            background: null
-                            activeFocusOnPress: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
+                        Rectangle {
+                            id: inputWorkspaceSelect
+                            implicitHeight: statusBar.barHeight
+                            implicitWidth:  workspacesPopup.contextWidth
+                            anchors.top: workspacesPopupTitle.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
 
-                            onAccepted: {
-                                var WorkspaceName = text;
-                                if (WorkspaceName.length > 0) {
-                                    Hyprland.dispatch("workspace name:" + WorkspaceName);
-                                    text = "";
-                                    focus = false;
+                            radius: statusBar.barGlobalRadius
+                            color: Qt.rgba(0, 0, 0, 0.4)
+
+                            border {
+                                width: statusBar.lineWidth
+                                color: statusBar.borderColor
+                            }
+
+                            TextField {
+                                id: workspaceInput
+                                anchors.fill: parent
+                                placeholderText: "输入工作区名字..."
+                                placeholderTextColor: statusBar.textColor
+                                color: statusBar.textColor
+                                font.pointSize: statusBar.fontSize
+                                background: null
+                                activeFocusOnPress: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+
+                                onAccepted: {
+                                    var WorkspaceName = text;
+                                    if (WorkspaceName.length > 0) {
+                                        Hyprland.dispatch("workspace name:" + WorkspaceName);
+                                        text = "";
+                                        focus = false;
+                                    }
+                                }
+
+                                focus: false
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+
+                                onEntered: {
+                                    workspaceInput.focus = true;
+                                }
+
+                                onExited: {
+                                    workspaceInput.focus = false;
                                 }
                             }
-
-                            focus: false
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-
-                            onEntered: {
-                                workspaceInput.focus = true;
+                        Rectangle {
+                            id: unamePopupTitle
+                            implicitHeight: statusBar.barHeight
+                            implicitWidth:  workspacesPopup.contextWidth
+                            radius: statusBar.barGlobalRadius
+                            anchors.top: inputWorkspaceSelect.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+                            color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
+                            border {
+                                width: statusBar.lineWidth
+                                color: statusBar.borderColor
                             }
-
-                            onExited: {
-                                workspaceInput.focus = false;
+                            Text {
+                                text: "无名工作区"
+                                width: workspacesPopupContext.implicitWidth
+                                height: statusBar.barHeight
+                                color: statusBar.textColor
+                                horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
+                                font.pointSize: statusBar.fontSize
+                                anchors.top: parent.top
+                                anchors.topMargin: 5
                             }
                         }
-                    }
+                        ColumnLayout {
+                            id: unamedContextMenu
+                            spacing: 5
 
-                    Rectangle {
-                        id: unamePopupTitle
-                        implicitHeight: statusBar.barHeight
-                        implicitWidth:  workspacesPopup.contextWidth
-                        radius: statusBar.barGlobalRadius
-                        anchors.top: inputWorkspaceSelect.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-                        color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
-                        border {
-                            width: statusBar.lineWidth
-                            color: statusBar.borderColor
+                            anchors.top: unamePopupTitle.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+
+                            readonly property int itemsPerLine: workspacesPopup.itemsPerRow
+                            readonly property int itemCount: workspacesPopupContext.unamedWorkspaces.length
+                            readonly property int itemsInLastRow: itemCount % workspacesPopup.itemsPerRow
+                            readonly property int emptySlots: itemsInLastRow === 0 ? 0 : workspacesPopup.itemsPerRow - itemsInLastRow
+                            readonly property int totalRows: Math.ceil(unamedContextMenu.itemCount * 1.0 / unamedContextMenu.itemsPerLine * 1.0)
+                            implicitHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
+                            implicitWidth:  workspacesPopup.contextWidth
+                            Flow {
+                                id: workspacesGrid
+                                spacing: workspacesPopup.gridSpacing
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
+                                Layout.preferredWidth: workspacesPopup.implicitWidth
+
+                                Repeater {
+                                    model: workspacesPopupContext.unamedWorkspaces
+                                    Rectangle {
+                                        implicitWidth: workspacesPopup.itemSize
+                                        implicitHeight: workspacesPopup.itemSize
+                                        radius: workspacesPopup.itemSize / 2
+                                        color: modelData.active ? "#8FBCBB" : workspacesPopup.normalColor
+                                        border.width: statusBar.lineWidth
+                                        border.color: statusBar.borderColor
+
+                                        Text {
+                                            text: modelData.name
+                                            anchors.centerIn: parent
+                                            color: statusBar.textColor
+                                            font.pointSize: statusBar.fontSize
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            hoverEnabled: true
+                                            onClicked: (mouse) => {
+                                                if (!modelData.active) {
+                                                    Hyprland.dispatch("workspace " + modelData.name);
+                                                    workspacesPopupLoader.close();
+                                                }
+                                                mouse.accepted = true;
+                                            }
+                                            onEntered: {
+                                                color = workspacesPopup.selectColor;
+                                            }
+                                            onExited: {
+                                                color = modelData.active ? "#8FBCBB" : workspacesPopup.normalColor;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Repeater {
+                                    model: workspacesGrid.emptySlots
+
+                                    Rectangle {
+                                        implicitWidth: workspacesPopup.itemSize
+                                        implicitHeight: workspacesPopup.itemSize
+                                        color: "transparent"
+                                        border.width: 0
+                                    }
+                                }
+                            }
                         }
-                        Text {
-                            text: "无名工作区"
-                            width: workspacesPopupContext.implicitWidth
-                            height: statusBar.barHeight
-                            color: statusBar.textColor
-                            horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
-                            font.pointSize: statusBar.fontSize
-                            anchors.top: parent.top
-                            anchors.topMargin: 5
+
+                        Rectangle {
+                            id: workspacesPopupNamedTitle
+                            anchors.top: unamedContextMenu.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+                            implicitHeight: statusBar.barHeight
+                            implicitWidth:  workspacesPopup.contextWidth
+                            radius: statusBar.barGlobalRadius
+                            visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
+                            color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
+                            border {
+                                width: statusBar.lineWidth
+                                color: statusBar.borderColor
+                            }
+                            Text {
+                                text: "命名工作区"
+                                width: workspacesPopupContext.implicitWidth
+                                height: statusBar.barHeight
+                                color: statusBar.textColor
+                                horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
+                                font.pointSize: statusBar.fontSize
+                                anchors.top: parent.top
+                                anchors.topMargin: 5
+                            }
                         }
-                    }
-                    ColumnLayout {
-                        id: unamedContextMenu
-                        spacing: 5
-
-                        anchors.top: unamePopupTitle.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-
-                        readonly property int itemsPerLine: workspacesPopup.itemsPerRow
-                        readonly property int itemCount: workspacesPopupContext.unamedWorkspaces.length
-                        readonly property int itemsInLastRow: itemCount % workspacesPopup.itemsPerRow
-                        readonly property int emptySlots: itemsInLastRow === 0 ? 0 : workspacesPopup.itemsPerRow - itemsInLastRow
-                        readonly property int totalRows: Math.ceil(unamedContextMenu.itemCount * 1.0 / unamedContextMenu.itemsPerLine * 1.0)
-                        implicitHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
-                        implicitWidth:  workspacesPopup.contextWidth
-                        Flow {
-                            id: workspacesGrid
+                        ColumnLayout {
+                            id: namedWorkspaceContext
+                            width:  workspacesPopup.contextWidth
+                            implicitHeight: workspacesPopupContext.namedWorkspaces.length * statusBar.barHeight
                             spacing: workspacesPopup.gridSpacing
+                            anchors.top: workspacesPopupNamedTitle.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+                            visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
                             Layout.fillWidth: true
-                            Layout.preferredHeight: unamedContextMenu.totalRows * workspacesPopup.itemSize + (unamedContextMenu.totalRows > 0 ? (unamedContextMenu.totalRows - 1) * workspacesPopup.gridSpacing : 0)
-                            Layout.preferredWidth: workspacesPopup.implicitWidth
 
                             Repeater {
-                                model: workspacesPopupContext.unamedWorkspaces
+                                model: workspacesPopupContext.namedWorkspaces
                                 Rectangle {
-                                    implicitWidth: workspacesPopup.itemSize
+                                    implicitWidth: namedWorkspaceContext.width
                                     implicitHeight: workspacesPopup.itemSize
-                                    radius: workspacesPopup.itemSize / 2
+                                    radius: statusBar.barGlobalRadius
+                                    border.width: modelData.active ? statusBar.lineWidth : 0
+                                    border.color: modelData.active ? statusBar.borderColor : 0
                                     color: modelData.active ? "#8FBCBB" : workspacesPopup.normalColor
-                                    border.width: statusBar.lineWidth
-                                    border.color: statusBar.borderColor
-
                                     Text {
                                         text: modelData.name
                                         anchors.centerIn: parent
@@ -319,6 +425,7 @@ Scope {
                                         onClicked: (mouse) => {
                                             if (!modelData.active) {
                                                 Hyprland.dispatch("workspace " + modelData.name);
+                                                workspacesPopupLoader.close();
                                             }
                                             mouse.accepted = true;
                                         }
@@ -331,168 +438,84 @@ Scope {
                                     }
                                 }
                             }
+                        }
+
+                        Rectangle {
+                            id: workspacesPopupSpecialTitle
+                            anchors.top: namedWorkspaceContext.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+                            implicitHeight: statusBar.barHeight
+                            implicitWidth:  workspacesPopup.contextWidth
+                            radius: statusBar.barGlobalRadius
+                            visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
+                            color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
+
+                            border {
+                                width: statusBar.lineWidth
+                                color: statusBar.borderColor
+                            }
+
+                            Text {
+                                text: "特殊工作区"
+                                width: workspacesPopupContext.implicitWidth
+                                height: statusBar.barHeight
+                                color: statusBar.textColor
+                                horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
+                                font.pointSize: statusBar.fontSize
+                                anchors.top: parent.top
+                                anchors.topMargin: 5
+                            }
+                        }
+                        ColumnLayout {
+                            id: specialorkspaceContext
+                            implicitWidth:  workspacesPopup.contextWidth
+                            implicitHeight: workspacesPopupContext.specialWorkspaces.length * statusBar.barHeight
+                            spacing: workspacesPopup.gridSpacing
+                            anchors.top: workspacesPopupSpecialTitle.bottom
+                            anchors.topMargin: workspacesPopup.gap
+                            anchors.left: parent.left
+                            anchors.leftMargin: workspacesPopup.gap
+                            visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
 
                             Repeater {
-                                model: workspacesGrid.emptySlots
-
+                                model: workspacesPopupContext.specialWorkspaces
                                 Rectangle {
-                                    implicitWidth: workspacesPopup.itemSize
+                                    implicitWidth: namedWorkspaceContext.implicitWidth
                                     implicitHeight: workspacesPopup.itemSize
-                                    color: "transparent"
-                                    border.width: 0
-                                }
-                            }
-                        }
-                    }
+                                    radius: statusBar.barGlobalRadius
+                                    color: workspacesPopup.normalColor
 
-                    Rectangle {
-                        id: workspacesPopupNamedTitle
-                        anchors.top: unamedContextMenu.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-                        implicitHeight: statusBar.barHeight
-                        implicitWidth:  workspacesPopup.contextWidth
-                        radius: statusBar.barGlobalRadius
-                        visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
-                        color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
-                        border {
-                            width: statusBar.lineWidth
-                            color: statusBar.borderColor
-                        }
-                        Text {
-                            text: "命名工作区"
-                            width: workspacesPopupContext.implicitWidth
-                            height: statusBar.barHeight
-                            color: statusBar.textColor
-                            horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
-                            font.pointSize: statusBar.fontSize
-                            anchors.top: parent.top
-                            anchors.topMargin: 5
-                        }
-                    }
-                    ColumnLayout {
-                        id: namedWorkspaceContext
-                        width:  workspacesPopup.contextWidth
-                        implicitHeight: workspacesPopupContext.namedWorkspaces.length * statusBar.barHeight
-                        spacing: workspacesPopup.gridSpacing
-                        anchors.top: workspacesPopupNamedTitle.bottom
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-                        visible: workspacesPopupContext.namedWorkspaces.length > 0 ? true : false
-                        Layout.fillWidth: true
-
-                        Repeater {
-                            model: workspacesPopupContext.namedWorkspaces
-                            Rectangle {
-                                implicitWidth: namedWorkspaceContext.width
-                                implicitHeight: workspacesPopup.itemSize
-                                radius: statusBar.barGlobalRadius
-                                border.width: modelData.active ? statusBar.lineWidth : 0
-                                border.color: modelData.active ? statusBar.borderColor : 0
-                                color: modelData.active ? "#8FBCBB" : workspacesPopup.normalColor
-                                Text {
-                                    text: modelData.name
-                                    anchors.centerIn: parent
-                                    color: statusBar.textColor
-                                    font.pointSize: statusBar.fontSize
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    hoverEnabled: true
-                                    onClicked: (mouse) => {
-                                        if (!modelData.active) {
-                                            Hyprland.dispatch("workspace " + modelData.name);
+                                    function getSpecialWorkspaceName(spacialWorkspaceName) {
+                                        if (spacialWorkspaceName.startsWith("special:")) {
+                                            return spacialWorkspaceName.substring("special:".length);
                                         }
-                                        mouse.accepted = true;
+                                        return spacialWorkspaceName;
                                     }
-                                    onEntered: {
-                                        color = workspacesPopup.selectColor;
+
+                                    Text {
+                                        text: getSpecialWorkspaceName(modelData.name)
+                                        anchors.centerIn: parent
+                                        color: statusBar.textColor
+                                        font.pointSize: statusBar.fontSize
                                     }
-                                    onExited: {
-                                        color = modelData.active ? "#8FBCBB" : workspacesPopup.normalColor;
-                                    }
-                                }
-                            }
-                        }
-                    }
 
-                    Rectangle {
-                        id: workspacesPopupSpecialTitle
-                        anchors.top: namedWorkspaceContext.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-                        implicitHeight: statusBar.barHeight
-                        implicitWidth:  workspacesPopup.contextWidth
-                        radius: statusBar.barGlobalRadius
-                        visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
-                        color: Qt.rgba(83 / 255.0, 134 / 255.0, 103 / 255.0, 0.8)
-
-                        border {
-                            width: statusBar.lineWidth
-                            color: statusBar.borderColor
-                        }
-
-                        Text {
-                            text: "特殊工作区"
-                            width: workspacesPopupContext.implicitWidth
-                            height: statusBar.barHeight
-                            color: statusBar.textColor
-                            horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
-                            font.pointSize: statusBar.fontSize
-                            anchors.top: parent.top
-                            anchors.topMargin: 5
-                        }
-                    }
-                    ColumnLayout {
-                        id: specialorkspaceContext
-                        implicitWidth:  workspacesPopup.contextWidth
-                        implicitHeight: workspacesPopupContext.specialWorkspaces.length * statusBar.barHeight
-                        spacing: workspacesPopup.gridSpacing
-                        anchors.top: workspacesPopupSpecialTitle.bottom
-                        anchors.topMargin: workspacesPopup.gap
-                        anchors.left: parent.left
-                        anchors.leftMargin: workspacesPopup.gap
-                        visible: workspacesPopupContext.specialWorkspaces.length > 0 ? true : false
-
-                        Repeater {
-                            model: workspacesPopupContext.specialWorkspaces
-                            Rectangle {
-                                implicitWidth: namedWorkspaceContext.implicitWidth
-                                implicitHeight: workspacesPopup.itemSize
-                                radius: statusBar.barGlobalRadius
-                                color: workspacesPopup.normalColor
-
-                                function getSpecialWorkspaceName(spacialWorkspaceName) {
-                                    if (spacialWorkspaceName.startsWith("special:")) {
-                                        return spacialWorkspaceName.substring("special:".length);
-                                    }
-                                    return spacialWorkspaceName;
-                                }
-
-                                Text {
-                                    text: getSpecialWorkspaceName(modelData.name)
-                                    anchors.centerIn: parent
-                                    color: statusBar.textColor
-                                    font.pointSize: statusBar.fontSize
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    hoverEnabled: true
-                                    onClicked: (mouse) => {
-                                        Hyprland.dispatch("togglespecialworkspace " + getSpecialWorkspaceName(modelData.name));
-                                        mouse.accepted = true;
-                                    }
-                                    onEntered: {
-                                        color = workspacesPopup.selectColor;
-                                    }
-                                    onExited: {
-                                        color = workspacesPopup.normalColor;
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
+                                        onClicked: (mouse) => {
+                                            Hyprland.dispatch("togglespecialworkspace " + getSpecialWorkspaceName(modelData.name));
+                                            workspacesPopupLoader.close();
+                                            mouse.accepted = true;
+                                        }
+                                        onEntered: {
+                                            color = workspacesPopup.selectColor;
+                                        }
+                                        onExited: {
+                                            color = workspacesPopup.normalColor;
+                                        }
                                     }
                                 }
                             }
@@ -507,8 +530,13 @@ Scope {
                 implicitWidth: trayIconsFlow.implicitWidth < statusBar.iconSize ? 30 : trayIconsFlow.implicitWidth + 10
                 visible: trayIconsFlow.implicitWidth < statusBar.iconSize ? false : true
 
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
+                anchors {
+                    top: parent.top
+                    topMargin: 10
+                    right: parent.right
+                    rightMargin: 20
+                    verticalCenter: parent.verticalCenter
+                }
 
                 color: statusBar.barNormalColor
                 radius: statusBar.barGlobalRadius
@@ -568,7 +596,7 @@ Scope {
                                                 var centerYLocal = trayItemRect.implicitHeight / 2;
                                                 var centerGlobalPoint = trayMouseArea.mapToItem(null, centerXLocal, centerYLocal);
                                                 menuLoader.active = true;
-                                                menuLoader.open(centerGlobalPoint.x, centerGlobalPoint.y);
+                                                menuLoader.open(centerGlobalPoint.x, centerGlobalPoint.y + 15);
                                             }
                                         }
 
@@ -602,14 +630,17 @@ Scope {
 
                                 Loader {
                                     id: menuLoader
+                                    active: false
 
                                     function open(x,y) {
+                                        active = true;
                                         item.x = x;
                                         item.y = y;
                                         item.open();
                                     }
                                     function close() {
                                         item.close();
+                                        active = false;
                                     }
 
                                     sourceComponent: SystemTrayMenu {
