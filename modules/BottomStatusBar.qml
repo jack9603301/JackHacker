@@ -790,6 +790,68 @@ Scope {
                     }
                 }
             }
+
+            Rectangle {
+                id: datetime
+                implicitHeight: statusBar.implicitHeight
+                implicitWidth: contextDatetime.implicitWidth + 10
+                visible: true
+
+                property string date: "YYYY年MM月DD日"
+                property string time: "HH:mm:ss "
+
+                anchors {
+                    top: parent.top
+                    topMargin: 10
+                    left: currentWorkspaceContext.right
+                    leftMargin: 10
+                    verticalCenter: parent.verticalCenter
+                }
+
+                color: statusBar.barNormalColor
+                radius: statusBar.barGlobalRadius
+                border {
+                    width: statusBar.lineWidth
+                    color: statusBar.borderColor
+                }
+
+                RowLayout {
+                    id: contextDatetime
+                    anchors.fill: parent
+                    spacing: 10
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        text: datetime.date
+                        color: statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                    }
+                    Text {
+                        text: datetime.time
+                        color: statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                    }
+                }
+
+                function updateTime() {
+                    const now = new Date();
+                    time = Qt.formatTime(now, "HH:mm:ss ");
+                    date = Qt.formatDate(now, "yyyy年MM月dd日");
+                }
+
+                Timer {
+                    interval: 500
+                    running: true
+                    repeat: true
+                    triggeredOnStart: true
+
+                    onTriggered: {
+                        datetime.updateTime();
+                    }
+                }
+            }
+
         }
     }
 }
