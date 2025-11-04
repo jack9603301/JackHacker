@@ -1,4 +1,6 @@
 import Quickshell
+import Quickshell.Io
+import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
@@ -529,6 +531,7 @@ Scope {
                 implicitHeight: statusBar.implicitHeight
                 implicitWidth: trayIconsFlow.implicitWidth < statusBar.iconSize ? 30 : trayIconsFlow.implicitWidth + 10
                 visible: trayIconsFlow.implicitWidth < statusBar.iconSize ? false : true
+                readonly property int iconSize: 20
 
                 anchors {
                     top: parent.top
@@ -568,7 +571,13 @@ Scope {
                                 id: trayIcon
                                 anchors.centerIn: trayItemRect
 
-                                source: modelData.icon
+                                source: {
+                                    if (modelData.icon.includes("input-keyboard-symbolic")) {
+                                        return "../assets/us-keyboard-input-white.svg"
+                                    } else {
+                                        return modelData.icon;
+                                    }
+                                }
 
                                 width: statusBar.iconSize - 10
                                 height: statusBar.iconSize - 10
@@ -596,6 +605,7 @@ Scope {
                                                 var centerYLocal = trayItemRect.implicitHeight / 2;
                                                 var centerGlobalPoint = trayMouseArea.mapToItem(null, centerXLocal, centerYLocal);
                                                 menuLoader.active = true;
+                                                menuLoader.set_fcitx_flag(modelData.title === "输入法");
                                                 menuLoader.open(centerGlobalPoint.x, centerGlobalPoint.y + 15);
                                             }
                                         }
@@ -638,15 +648,24 @@ Scope {
                                         item.y = y;
                                         item.open();
                                     }
+
                                     function close() {
                                         item.close();
                                         active = false;
+                                    }
+
+                                    function set_fcitx_flag(is_fcitx) {
+                                        item.fcitx = is_fcitx;
                                     }
 
                                     sourceComponent: SystemTrayMenu {
                                         id: menu
                                         window: statusBar
                                         menu: modelData.menu
+                                        iconSize: trayContext.iconSize
+                                        onTrigger: {
+                                            menuLoader.close();
+                                        }
                                     }
                                 }
 
@@ -660,6 +679,114 @@ Scope {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: memAndCPU
+                implicitHeight: statusBar.implicitHeight
+                implicitWidth: contextMemAndCPU.implicitWidth + 10
+                visible: true
+
+                property string cpuUsage: "..."
+                property string memUsage: "..."
+
+                anchors {
+                    top: parent.top
+                    topMargin: 10
+                    right: trayContext.left
+                    rightMargin: 10
+                    verticalCenter: parent.verticalCenter
+                }
+
+                color: statusBar.barNormalColor
+                radius: statusBar.barGlobalRadius
+                border {
+                    width: statusBar.lineWidth
+                    color: statusBar.borderColor
+                }
+
+                RowLayout {
+                    id: contextMemAndCPU
+                    anchors.fill: parent
+                    spacing: 10
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        text: "CPU: " + memAndCPU.cpuUsage
+                        color: statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                    }
+                    Text {
+                        text: "RAM: " + memAndCPU.memUsage
+                        color: statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                    }
+                }
+
+                Process {
+                    id: memProcess
+
+                    command: ["free", "-g"]
+                    running: false
+
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            const lines = this.text.split('\n');
+                            if (lines.length > 1) {
+                                const memLine = lines[1].replace(/\s+/g, ' ').trim().split(' ');
+                                if (memLine.length >= 4) {
+                                    const total = parseInt(memLine[1]);
+                                    const used = parseInt(memLine[2]);
+                                    const available = parseInt(memLine[6]);
+
+                                    memAndCPU.memUsage = `${used}GB / ${total}GB (${(used/total*100).toFixed(1)}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Process {
+                    id: cpuProcess
+                    command: ["iostat", "-c", "1", "2", "-o", "JSON"]
+                    running: false
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            try {
+                                const jsonObject = JSON.parse(this.text);
+                                const statsArray = jsonObject.sysstat.hosts[0].statistics;
+                                if (statsArray && statsArray.length > 0) {
+                                    const latestStats = statsArray[statsArray.length - 1];
+                                    const avgCpu = latestStats["avg-cpu"];
+
+                                    if (avgCpu && avgCpu.idle !== undefined) {
+                                        const idle = parseFloat(avgCpu.idle);
+                                        const usage = 100.0 - idle;
+
+                                        memAndCPU.cpuUsage = `${usage.toFixed(1)}%`;
+                                    } else {
+                                        memAndCPU.cpuUsage = "JSON Structure Error";
+                                    }
+                                } else {
+                                    memAndCPU.cpuUsage = "N/A";
+                                }
+                            } catch (e) {
+                                memAndCPU.cpuUsage = "JSON Parser Error";
+                                console.error("Failed to parse iostat JSON:", e.message);
+                            }
+                        }
+                    }
+                }
+
+                Timer {
+                    interval: 2000
+                    running: true
+                    repeat: true
+                    onTriggered: {
+                        memProcess.running = true;
+                        cpuProcess.running = true;
                     }
                 }
             }

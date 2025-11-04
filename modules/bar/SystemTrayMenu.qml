@@ -18,6 +18,11 @@ PopupWindow {
     readonly property color dashLineSeparator: Qt.rgba(1, 1, 1, 0.5)
     readonly property int dashLength: 5
     readonly property int dashSpacing: 2
+    property int iconSize: 30
+    readonly property int buttonSize: 30
+    property bool fcitx: false
+
+    signal trigger()
 
     anchor.window: window
     anchor.rect.x: x
@@ -58,22 +63,42 @@ PopupWindow {
         }
 
         ColumnLayout {
+            id: menuItemContextLayout
             spacing: 5
             anchors.top: parent.top
             anchors.topMargin: 5
             Layout.fillWidth: true
+
+            property bool closeDisplayItem: false
+
+            Component.onCompleted: {
+                var CloseDisplayItem = true;
+                for (var i = 0; i < menuItemsRepeater.count; i++) {
+                    var menuItem = menuItemsRepeater.itemAt(i);
+                    if (!menuItem.separatorExtraOption) {
+                        CloseDisplayItem = false;
+                    }
+                }
+                closeDisplayItem = CloseDisplayItem;
+            }
+
             Repeater {
+                id: menuItemsRepeater
                 model: menuOpener.children
                 Rectangle {
                     id: menuItemContext
                     radius: modelData.isSeparator ? 0.5 : 5
                     anchors.left: parent.left
                     anchors.leftMargin: 5
-                    implicitHeight: modelData.isSeparator ? 1 : menuItem.height
-                    implicitWidth: (menuItem.paintedWidth + 10) > parent.width ? menuItem.paintedWidth + 10 : parent.width
+                    implicitHeight: modelData.isSeparator ? 1 : menuItemLayout.height
+                    implicitWidth: (menuItemLayout.width + 10) > parent.width ? menuItemLayout.width + 10 : parent.width
                     color: "transparent"
+                    visible: modelData.enabled
+
+                    property alias separatorExtraOption: separatorItemOption.visible
 
                     Item {
+                        id: separatorItem
                         visible: modelData.isSeparator
                         anchors.fill: parent
 
@@ -91,15 +116,56 @@ PopupWindow {
                         }
                     }
 
-                    Text {
-                        id: menuItem
-                        text: modelData.text
-                        horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.leftMargin: 5
-                        color: "white"
-                        font.pointSize: 10
+                    RowLayout {
+                        id: menuItemLayout
+                        spacing: 5
+                        visible: !modelData.isSeparator
+
+                        RadioButton {
+                            id: radioButtomOption
+                            visible: !menuItemContextLayout.closeDisplayItem && (!root.fcitx && (modelData.buttonType === QsMenuButtonType.RadioButton))
+                            checked: modelData.checkState === Qt.Checked
+                        }
+
+                        CheckBox {
+                            id: checkBoxOption
+                            visible: !menuItemContextLayout.closeDisplayItem && (!root.fcitx && (modelData.buttonType === QsMenuButtonType.CheckBox))
+                            checked: modelData.checkState === Qt.Checked
+                        }
+
+                        Item {
+                            id: separatorItemOption
+                            visible: !menuItemContextLayout.closeDisplayItem && (root.fcitx || (modelData.buttonType === QsMenuButtonType.None))
+                            width: root.buttonSize
+                        }
+
+
+                        Image {
+                            id: menuItemImage
+                            visible: modelData.icon != ""
+                            source: {
+                                if (modelData.icon.includes("input-keyboard")) {
+                                    return "../../assets/us-keyboard-input-white.svg";
+                                } else if(modelData.icon.includes("view-refresh")) {
+                                    return "../../assets/view-refresh-white.svg";
+                                } else if(modelData.icon.includes("application-exit")) {
+                                    return "../../assets/application-exit.svg";
+                                } else {
+                                    return modelData.icon;
+                                }
+                            }
+                            Layout.preferredWidth: root.iconSize
+                            Layout.preferredHeight: root.iconSize
+                            fillMode: Image.PreserveAspectFit
+                        }
+
+                        Text {
+                            id: menuItem
+                            text: modelData.text
+                            horizontalAlignment: Text.AlignHCenter | Text.AlignVCenter
+                            color: "white"
+                            font.pointSize: 10
+                        }
                     }
 
                     MouseArea {
@@ -115,7 +181,6 @@ PopupWindow {
                             }
                             if (!modelData.isSeparator) {
                                 color = Qt.rgba(5/255, 219/255, 102/255, 0.6);
-                                //color = "#3c3600";
                             }
                         }
 
@@ -128,7 +193,7 @@ PopupWindow {
                         onClicked: (mouse) => {
                             if (!modelData.isSeparator) {
                                 modelData.triggered()
-                                root.close()
+                                root.trigger()
                             }
                             mouse.accepted = true;
                         }
