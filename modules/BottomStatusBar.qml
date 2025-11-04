@@ -852,6 +852,226 @@ Scope {
                 }
             }
 
+            Rectangle {
+                id: audioControl
+                implicitHeight: statusBar.implicitHeight
+                implicitWidth: contextAudioControl.implicitWidth + 10
+                visible: true
+
+                anchors {
+                    top: parent.top
+                    topMargin: 10
+                    right: memAndCPU.left
+                    rightMargin: 10
+                    verticalCenter: parent.verticalCenter
+                }
+
+                property int currentVolume: -1
+                property bool isMuted: false
+                property string mixerControlName: "PCM"
+
+                color: statusBar.barNormalColor
+                radius: statusBar.barGlobalRadius
+                border {
+                    width: statusBar.lineWidth
+                    color: statusBar.borderColor
+                }
+
+                RowLayout {
+                    id: contextAudioControl
+                    anchors.fill: parent
+                    spacing: 10
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        text: audioControl.currentVolume < 0 ? "错误: 音量数据无效   " : "音量: " + audioControl.currentVolume + "%   "
+                        color: audioControl.isMuted ? "red" : statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 80
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: "#444444"
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Rectangle {
+                            width: parent.width * (audioControl.currentVolume / 100)
+                            height: parent.height
+                            radius: 3
+                            color: audioControl.isMuted ? "red" : "#2ecc71"
+                        }
+                    }
+
+                    Text {
+                        text: "静音状态: " + (audioControl.isMuted ? "\uf6a9 已静音   " : "\uf028 未静音   ")
+                        color: audioControl.isMuted ? "red" : statusBar.textColor
+                        font.pointSize: statusBar.fontSize
+                        visible: audioControl.currentVolume < 0 ? false : true
+                    }
+                }
+            }
+
+            Process {
+                id: getAmixer
+                command: ["amixer", "get", audioControl.mixerControlName]
+                running: false
+
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        var output = text;
+                        var volumeMatch = output.match(/\[(\d+)%\]/);
+                        var muteMatch = output.match(/\[(on|off)\]/);
+
+                        if (volumeMatch && volumeMatch[1]) {
+                            Qt.callLater(function() {
+                                audioControl.currentVolume = parseInt(volumeMatch[1]);
+                            });
+                        }
+
+                        if (muteMatch && muteMatch[1]) {
+                            Qt.callLater(function() {
+                                audioControl.isMuted = (muteMatch[1] === "off");
+                            });
+                        }
+                    }
+                }
+            }
+
+            Process {
+                id: muteToggle
+                command: ["amixer", "set", audioControl.mixerControlName, "toggle"]
+                running: false
+
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        audioTimer.restart();
+                    }
+                }
+            }
+
+            Process {
+                id: pavuControl
+                command: "pavucontrol"
+                running: false
+            }
+
+            Process {
+                id: volumeUp
+                command: ["amixer", "set", audioControl.mixerControlName, "1%+"]
+                running: false
+
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        getAmixer.running = true;
+                    }
+                }
+            }
+
+            Process {
+                id: volumeDown
+                command: ["amixer", "set", audioControl.mixerControlName, "1%-"]
+                running: false
+
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        getAmixer.running = true;
+                    }
+                }
+            }
+
+            Timer {
+                id: audioTimer
+                interval: 3000
+                repeat: true
+                running: true
+                triggeredOnStart: true
+
+                onTriggered: {
+                    getAmixer.running = true
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: {
+                    if (mouse.button === Qt.LeftButton) {
+                        muteToggleProcess.running = true;
+                    } else if (mouse.button === Qt.RightButton) {
+                        pavuControl.running = true;
+                    }
+                }
+
+                onWheel: (wheel) => {
+                    wheel.accepted = true;
+                    if (wheel.angleDelta.y > 0) {
+                        volumeUp.running = true;
+                    } else if (wheel.angleDelta.y < 0) {
+                        volumeDown.running = true;
+                    }
+                }
+            }
+
+            Rectangle {
+                id: lockControl
+                implicitHeight: statusBar.implicitHeight
+                implicitWidth: contextLockControl.implicitWidth + 10
+                visible: true
+
+                anchors {
+                    top: parent.top
+                    topMargin: 10
+                    left: datetime.right
+                    leftMargin: 10
+                    verticalCenter: parent.verticalCenter
+                }
+
+                property string status: "Disabled"
+
+                color: statusBar.barNormalColor
+                radius: statusBar.barGlobalRadius
+                border {
+                    width: statusBar.lineWidth
+                    color: statusBar.borderColor
+                }
+
+                Process {
+                    id: getLockStatus
+                    command: ["/home/jack/.config/waybar/status_hyprlock.fish"]
+                    running: false
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            var output = text;
+                            lockControl.status = output.replace(/[\r\n]/g, "");
+                        }
+                    }
+                }
+
+                Text {
+                    id: contextLockControl
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.top: parent.top
+                    anchors.topMargin: 5
+                    text: lockControl.status + "   "
+                    color: statusBar.textColor
+                    font.pointSize: statusBar.fontSize
+                }
+
+                Timer {
+                    interval: 3000
+                    repeat: true
+                    running: true
+                    triggeredOnStart: true
+                    onTriggered: {
+                        getLockStatus.running = true;
+                    }
+                }
+            }
         }
     }
 }
