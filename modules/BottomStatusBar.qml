@@ -913,105 +913,105 @@ Scope {
                         visible: audioControl.currentVolume < 0 ? false : true
                     }
                 }
-            }
 
-            Process {
-                id: getAmixer
-                command: ["amixer", "get", audioControl.mixerControlName]
-                running: false
+                Process {
+                    id: getAmixer
+                    command: ["amixer", "get", audioControl.mixerControlName]
+                    running: false
 
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        var output = text;
-                        var volumeMatch = output.match(/\[(\d+)%\]/);
-                        var muteMatch = output.match(/\[(on|off)\]/);
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            var output = text;
+                            var volumeMatch = output.match(/\[(\d+)%\]/);
+                            var muteMatch = output.match(/\[(on|off)\]/);
 
-                        if (volumeMatch && volumeMatch[1]) {
-                            Qt.callLater(function() {
-                                audioControl.currentVolume = parseInt(volumeMatch[1]);
-                            });
+                            if (volumeMatch && volumeMatch[1]) {
+                                Qt.callLater(function() {
+                                    audioControl.currentVolume = parseInt(volumeMatch[1]);
+                                });
+                            }
+
+                            if (muteMatch && muteMatch[1]) {
+                                Qt.callLater(function() {
+                                    audioControl.isMuted = (muteMatch[1] === "off");
+                                });
+                            }
                         }
+                    }
+                }
 
-                        if (muteMatch && muteMatch[1]) {
-                            Qt.callLater(function() {
-                                audioControl.isMuted = (muteMatch[1] === "off");
-                            });
+                Process {
+                    id: muteToggle
+                    command: ["amixer", "set", audioControl.mixerControlName, "toggle"]
+                    running: false
+
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            audioTimer.restart();
                         }
                     }
                 }
-            }
 
-            Process {
-                id: muteToggle
-                command: ["amixer", "set", audioControl.mixerControlName, "toggle"]
-                running: false
-
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        audioTimer.restart();
-                    }
+                Process {
+                    id: pavuControl
+                    command: "pavucontrol"
+                    running: false
                 }
-            }
 
-            Process {
-                id: pavuControl
-                command: "pavucontrol"
-                running: false
-            }
+                Process {
+                    id: volumeUp
+                    command: ["amixer", "set", audioControl.mixerControlName, "1%+"]
+                    running: false
 
-            Process {
-                id: volumeUp
-                command: ["amixer", "set", audioControl.mixerControlName, "1%+"]
-                running: false
-
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        getAmixer.running = true;
-                    }
-                }
-            }
-
-            Process {
-                id: volumeDown
-                command: ["amixer", "set", audioControl.mixerControlName, "1%-"]
-                running: false
-
-                stdout: StdioCollector {
-                    onStreamFinished: {
-                        getAmixer.running = true;
-                    }
-                }
-            }
-
-            Timer {
-                id: audioTimer
-                interval: 3000
-                repeat: true
-                running: true
-                triggeredOnStart: true
-
-                onTriggered: {
-                    getAmixer.running = true
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onClicked: {
-                    if (mouse.button === Qt.LeftButton) {
-                        muteToggleProcess.running = true;
-                    } else if (mouse.button === Qt.RightButton) {
-                        pavuControl.running = true;
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            getAmixer.running = true;
+                        }
                     }
                 }
 
-                onWheel: (wheel) => {
-                    wheel.accepted = true;
-                    if (wheel.angleDelta.y > 0) {
-                        volumeUp.running = true;
-                    } else if (wheel.angleDelta.y < 0) {
-                        volumeDown.running = true;
+                Process {
+                    id: volumeDown
+                    command: ["amixer", "set", audioControl.mixerControlName, "1%-"]
+                    running: false
+
+                    stdout: StdioCollector {
+                        onStreamFinished: {
+                            getAmixer.running = true;
+                        }
+                    }
+                }
+
+                Timer {
+                    id: audioTimer
+                    interval: 3000
+                    repeat: true
+                    running: true
+                    triggeredOnStart: true
+
+                    onTriggered: {
+                        getAmixer.running = true
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: {
+                        if (mouse.button === Qt.LeftButton) {
+                            muteToggleProcess.running = true;
+                        } else if (mouse.button === Qt.RightButton) {
+                            pavuControl.running = true;
+                        }
+                    }
+
+                    onWheel: (wheel) => {
+                        wheel.accepted = true;
+                        if (wheel.angleDelta.y > 0) {
+                            volumeUp.running = true;
+                        } else if (wheel.angleDelta.y < 0) {
+                            volumeDown.running = true;
+                        }
                     }
                 }
             }
@@ -1051,6 +1051,12 @@ Scope {
                     }
                 }
 
+                Process {
+                    id: switchLockStatus
+                    command: ["/home/jack/.config/waybar/switch_hyprlock.fish"]
+                    running: false
+                }
+
                 Text {
                     id: contextLockControl
                     anchors.left: parent.left
@@ -1063,12 +1069,23 @@ Scope {
                 }
 
                 Timer {
-                    interval: 3000
+                    id: timerLockStatus
+                    interval: 500
                     repeat: true
                     running: true
                     triggeredOnStart: true
                     onTriggered: {
                         getLockStatus.running = true;
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (mouse.button === Qt.LeftButton) {
+                            switchLockStatus.running = true;
+                            timerLockStatus.restart();
+                        }
                     }
                 }
             }
